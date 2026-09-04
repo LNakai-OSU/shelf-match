@@ -57,6 +57,38 @@ npm install
 npm run dev   # http://localhost:5173
 ```
 
+## Screenshots
+
+![Customer landing page, describe-what-you-want mode](screenshots/01-describe-what-you-want.png)
+**Customer: describe what you want.** No book titles needed - a store
+picker at the top (defaults to the built-in simulated inventory), three
+ways to build a profile, and example prompts for the free-text genre
+search.
+
+![Genre-detected results for "epic fantasy with dragons"](screenshots/02-genre-detected-results.png)
+**Free-text genre matching.** "Epic fantasy with dragons" resolves to the
+Sci-Fi & Fantasy section and returns Stephen King, Neil Gaiman, Terry
+Pratchett, Brandon Sanderson - all keyword-matched against the same genre
+vocabulary the content model itself uses, no language model involved.
+
+![Three-way recommendation comparison for a Harry Potter/A Song of Ice and Fire profile](screenshots/03-three-way-comparison.png)
+**Content-based vs. collaborative vs. hybrid.** Rating Harry Potter and *A
+Game of Thrones* five stars: content-based stays tightly on-genre,
+collaborative filtering (honestly) leans on broadly-loved books given so
+little signal to fold in, and the hybrid blends both - all three ranked
+against the same 1,900-title inventory, side by side.
+
+![Store owner upload flow with a generated store code](screenshots/04-store-owner-upload.png)
+**Store: list your inventory.** A plain-text book list matched 9 of 10
+rows against the catalog; the store gets a shareable code customers can
+select from the store picker.
+
+![Customer browsing a store-uploaded inventory](screenshots/05-browse-custom-store.png)
+**A customer shopping a store-uploaded inventory.** Selecting that
+9-book store from the picker scopes browsing, search, and recommendations
+to exactly those titles - the same ranking logic, an arbitrarily small
+inventory.
+
 ## The constrained-ranking problem
 
 A generic recommender ranks the whole catalog and hopes the top pick is
