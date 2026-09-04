@@ -2,17 +2,27 @@
 
 A book recommender constrained to what a small store actually has on the
 shelf, not the whole internet's catalog. Trained on real Goodreads rating
-data, but every recommendation is filtered down to a simulated indie
-bookstore's curated inventory - so the interesting engineering problem
-isn't "recommend the best book," it's "recommend the best book we can
-actually hand the customer today."
+data, but every recommendation is filtered down to one store's actual
+inventory - so the interesting engineering problem isn't "recommend the
+best book," it's "recommend the best book we can actually hand the
+customer today."
+
+Two sides to the app:
+- **As a customer**, describe what you're in the mood for, search and
+  rate a few favorites, or import a real Goodreads export - then compare
+  content-based, collaborative, and hybrid recommendations, all scored
+  against one store's shelf.
+- **As a store**, upload the books you carry (a plain text list or a CSV)
+  and get a store code - customers can then shop against exactly your
+  inventory instead of the built-in simulated one.
 
 - `backend/` - Python. `recsys/` holds the content-based model, the
-  collaborative-filtering model, and the hybrid ranker; `api/` is a thin
-  FastAPI layer over them.
-- `frontend/` - React + Vite. Search-and-rate or import a real Goodreads
-  export to build a profile, then compare content-based vs. collaborative
-  vs. hybrid recommendations side by side.
+  collaborative-filtering model, the hybrid ranker, the free-text query
+  parser, and the store-matching/registry logic; `api/` is a FastAPI layer
+  over all of it.
+- `frontend/` - React + Vite. A customer/store role toggle, a store
+  picker, three ways to build a customer profile, and a three-way
+  recommendation comparison.
 
 ## Why this dataset, not a live Goodreads pull
 
@@ -70,6 +80,46 @@ actual problem statement, not an afterthought:
   whenever the ideal picks aren't stocked. Scoring the constrained set
   directly means the recommender is always solving the actual problem: best
   available, not best hypothetical.
+
+## Any store, not just the built-in one
+
+`recsys/stores.py` is a small in-memory registry: a "store" is just a
+name plus a set of book_ids (and per-book stock counts). The pre-built
+simulated inventory from `build_inventory.py` is registered as `"default"`
+at API startup; a store owner uploading a book list through the app (`POST
+/api/stores`) gets a fresh one, matched against the catalog the same way a
+Goodreads export is (`recsys/store_import.py`, sharing the ISBN13 -> ISBN
+-> title+author -> title-alone matcher in `recsys/matching.py` with the
+Goodreads importer rather than duplicating that logic). Every
+recommendation/browse/search endpoint takes a `store_id` and scores or
+filters against *that* store's set - a customer picking a 9-book store a
+store owner just uploaded gets ranked results over exactly those 9 books,
+not the 1,900-book default.
+
+This is intentionally ephemeral and unauthenticated (no database, no
+accounts, stores vanish on server restart) - the right scope for
+demonstrating the constrained-ranking logic generalizes to *any* inventory
+size, not a claim that this is production multi-tenancy.
+
+## Describing what you want, without an LLM
+
+The customer's other cold-start path - "type in the kind of book you're
+looking for" - doesn't call out to a language model. `recsys/query_parser.py`
+whole-word-matches the query against the same ~300 raw Goodreads tag
+phrases `genre_tags.py` already collapses into ~40 canonical genres (so
+"sci-fi," "scifi," and "space opera"-adjacent tags all resolve the same
+way as they do for the content model), builds a synthetic token document
+in the *exact* vector space `ContentModel`'s TF-IDF vectorizer was fit on,
+and reuses that model's own scoring - no separate index, no new
+dependency. Longer phrases are matched first and claim their span so a
+generic word inside a more specific phrase isn't double-counted (`"novel"`
+-> literary-fiction shouldn't also fire inside `"graphic novel"` ->
+graphic-novels).
+
+This is keyword matching, not language understanding, and the API/UI say
+so directly: a query with no recognizable genre word ("something my
+grandmother would like") returns no results and an explicit message
+rather than a guess dressed up as a real answer.
 
 ## Two models, compared, plus a hybrid
 
@@ -144,11 +194,14 @@ recommendations) produced a sane answer, not just whether the code ran.
 
 | Endpoint | What it does |
 |---|---|
-| `GET /api/books/search?q=` | Search the full 10k-book catalog by title/author (not just inventory - you can name a favorite the store doesn't carry) |
-| `GET /api/inventory/sections` | Section names + counts in the simulated inventory |
-| `GET /api/inventory?section=&offset=&limit=` | Browse the inventory, optionally filtered by section |
-| `POST /api/recommendations` | Body: `{"liked": [{"book_id", "rating"}, ...], "alpha": 0.5, "top_n": 12}` - returns content/collaborative/hybrid rankings, inventory-only |
-| `POST /api/goodreads-import` | Multipart CSV upload - matches a real Goodreads export against the catalog |
+| `GET /api/stores` | List every registered store: `{id, name, size}` |
+| `POST /api/stores` | Multipart `name` + book-list file (CSV or plain text) - matches it against the catalog, registers a new store, returns a `store_id` |
+| `GET /api/stores/{id}/sections` | Section names + counts for that store |
+| `GET /api/stores/{id}/inventory?section=&offset=&limit=` | Browse that store's inventory, optionally filtered by section |
+| `GET /api/books/search?q=&store_id=` | Search the full 10k-book catalog by title/author (not just inventory - you can name a favorite a given store doesn't carry); annotates whether each hit is in that store |
+| `POST /api/recommendations` | Body: `{"liked": [{"book_id","rating"}, ...], "store_id": "default", "alpha": 0.5, "top_n": 12}` - content/collaborative/hybrid rankings, scored against that store only |
+| `POST /api/recommendations/by-description` | Body: `{"query": "...", "store_id": "default", "top_n": 12}` - free-text genre matching, content-only (no ratings to fold into collaborative filtering) |
+| `POST /api/goodreads-import` | Multipart CSV + `store_id` - matches a real Goodreads export against the catalog, annotated for that store |
 
 ## What's real vs. simulated
 

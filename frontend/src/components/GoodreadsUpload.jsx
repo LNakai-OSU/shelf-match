@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { uploadGoodreadsExport } from "../api";
 
-export default function GoodreadsUpload({ onImport }) {
+export default function GoodreadsUpload({ onImport, storeId = "default" }) {
   const [status, setStatus] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -11,7 +11,7 @@ export default function GoodreadsUpload({ onImport }) {
     if (!file) return;
     setBusy(true);
     setError(null);
-    uploadGoodreadsExport(file)
+    uploadGoodreadsExport(file, storeId)
       .then((res) => {
         setStatus(res);
         onImport(res.matches);

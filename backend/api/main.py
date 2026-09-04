@@ -3,13 +3,16 @@ from typing import List, Optional
 
 import numpy as np
 import pandas as pd
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from recsys.data_loader import PROCESSED
 from recsys.goodreads_import import parse_goodreads_export
-from recsys.hybrid import hybrid_rank
+from recsys.hybrid import hybrid_rank, rank_by_profile
+from recsys.query_parser import query_to_document
+from recsys.store_import import parse_store_upload
+from recsys.stores import create_store, get_store, list_stores, register_store
 
 app = FastAPI(title="Shelf Match - inventory-constrained book recommender")
 
@@ -30,11 +33,25 @@ with open(PROCESSED / "cf_model.pkl", "rb") as f:
     _cf_blob = pickle.load(f)
     CF_MODEL = _cf_blob["model"]
 
-INVENTORY_IDS = BOOKS[BOOKS["in_inventory"]].index.to_numpy()
+_default_inventory = BOOKS[BOOKS["in_inventory"]]
+register_store(
+    "default",
+    "Simulated Indie Bookstore (demo)",
+    _default_inventory.index.to_numpy(),
+    stock={int(bid): int(row.stock_quantity) for bid, row in _default_inventory.iterrows()},
+)
 
 
-def _book_payload(book_id, score=None):
+def _get_store_or_404(store_id):
+    store = get_store(store_id)
+    if store is None:
+        raise HTTPException(404, f"no store with id '{store_id}' - check /api/stores")
+    return store
+
+
+def _book_payload(book_id, store=None, score=None):
     row = BOOKS.loc[book_id]
+    in_stock = store is not None and book_id in store["book_ids"]
     payload = {
         "book_id": int(book_id),
         "title": row["title"],
@@ -44,8 +61,8 @@ def _book_payload(book_id, score=None):
         "image_url": row["image_url"],
         "section": row["section"] if pd.notna(row["section"]) else "General",
         "genres": row["genres"].split("|") if isinstance(row["genres"], str) and row["genres"] else [],
-        "in_inventory": bool(row["in_inventory"]),
-        "stock_quantity": int(row["stock_quantity"]),
+        "in_inventory": in_stock,
+        "stock_quantity": store["stock"].get(int(book_id), 0) if in_stock else 0,
     }
     if score is not None:
         payload["score"] = round(float(score), 4)
@@ -53,29 +70,58 @@ def _book_payload(book_id, score=None):
 
 
 @app.get("/api/books/search")
-def search_books(q: str, limit: int = 15):
+def search_books(q: str, store_id: str = "default", limit: int = 15):
     if len(q) < 2:
         return []
+    store = _get_store_or_404(store_id)
     ql = q.lower()
     mask = BOOKS["title"].str.lower().str.contains(ql, na=False) | BOOKS["authors"].str.lower().str.contains(ql, na=False)
     hits = BOOKS[mask].sort_values("ratings_count", ascending=False).head(limit)
-    return [_book_payload(bid) for bid in hits.index]
+    return [_book_payload(bid, store) for bid in hits.index]
 
 
-@app.get("/api/inventory/sections")
-def inventory_sections():
-    counts = BOOKS[BOOKS["in_inventory"]]["section"].value_counts()
+@app.get("/api/stores")
+def stores():
+    return list_stores()
+
+
+@app.post("/api/stores")
+async def upload_store(name: str = Form(...), file: UploadFile = File(...)):
+    content = await file.read()
+    matches, total_rows = parse_store_upload(content, BOOKS.reset_index())
+    if len(matches) == 0:
+        raise HTTPException(400, "couldn't match any books from that file against the catalog")
+    stock = {int(r.book_id): int(r.quantity) for r in matches.itertuples()}
+    store = create_store(name.strip() or "Unnamed store", stock.keys(), stock)
+    return {
+        "store_id": store["id"],
+        "name": store["name"],
+        "total_rows": total_rows,
+        "matched_count": len(matches),
+        "matches": [
+            {"book_id": int(r.book_id), "title": r.title, "quantity": r.quantity, "matched_on": r.matched_on}
+            for r in matches.itertuples()
+        ],
+    }
+
+
+@app.get("/api/stores/{store_id}/sections")
+def store_sections(store_id: str):
+    store = _get_store_or_404(store_id)
+    df = BOOKS.loc[list(store["book_ids"])]
+    counts = df["section"].value_counts()
     return [{"section": s, "count": int(c)} for s, c in counts.items()]
 
 
-@app.get("/api/inventory")
-def inventory(section: Optional[str] = None, limit: int = 40, offset: int = 0):
-    df = BOOKS[BOOKS["in_inventory"]]
+@app.get("/api/stores/{store_id}/inventory")
+def store_inventory(store_id: str, section: Optional[str] = None, limit: int = 40, offset: int = 0):
+    store = _get_store_or_404(store_id)
+    df = BOOKS.loc[list(store["book_ids"])]
     if section:
         df = df[df["section"] == section]
     df = df.sort_values("ratings_count", ascending=False)
     page = df.iloc[offset : offset + limit]
-    return {"total": len(df), "items": [_book_payload(bid) for bid in page.index]}
+    return {"total": len(df), "items": [_book_payload(bid, store) for bid in page.index]}
 
 
 class LikedBook(BaseModel):
@@ -85,6 +131,7 @@ class LikedBook(BaseModel):
 
 class RecommendRequest(BaseModel):
     liked: List[LikedBook]
+    store_id: str = "default"
     alpha: float = 0.5
     top_n: int = 12
 
@@ -93,6 +140,7 @@ class RecommendRequest(BaseModel):
 def recommendations(req: RecommendRequest):
     if len(req.liked) < 1:
         raise HTTPException(400, "need at least one liked book")
+    store = _get_store_or_404(req.store_id)
     liked_ids = [b.book_id for b in req.liked]
     liked_ratings = [b.rating for b in req.liked]
     unknown = [b for b in liked_ids if b not in BOOKS.index]
@@ -102,20 +150,49 @@ def recommendations(req: RecommendRequest):
     ranked = hybrid_rank(
         CONTENT_MODEL,
         CF_MODEL,
-        INVENTORY_IDS,
+        list(store["book_ids"]),
         liked_ids,
         liked_ratings,
         alpha=req.alpha,
         top_n=req.top_n,
         exclude_book_ids=liked_ids,
     )
+    return {method: [_book_payload(bid, store, score) for bid, score in items] for method, items in ranked.items()}
+
+
+class DescribeRequest(BaseModel):
+    query: str
+    store_id: str = "default"
+    top_n: int = 12
+
+
+@app.post("/api/recommendations/by-description")
+def recommendations_by_description(req: DescribeRequest):
+    store = _get_store_or_404(req.store_id)
+    document, detected = query_to_document(req.query)
+    if document is None:
+        return {
+            "genres_detected": [],
+            "sections_detected": [],
+            "results": [],
+            "message": (
+                "Couldn't pick out a genre from that description - try naming a genre or "
+                "vibe directly (e.g. \"cozy mystery,\" \"epic fantasy,\" \"YA romance\")."
+            ),
+        }
+    profile = CONTENT_MODEL.profile_from_document(document)
+    ranked = rank_by_profile(CONTENT_MODEL, list(store["book_ids"]), profile, top_n=req.top_n)
     return {
-        method: [_book_payload(bid, score) for bid, score in items] for method, items in ranked.items()
+        "genres_detected": detected["genres"],
+        "sections_detected": detected["sections"],
+        "results": [_book_payload(bid, store, score) for bid, score in ranked],
+        "message": None,
     }
 
 
 @app.post("/api/goodreads-import")
-async def goodreads_import(file: UploadFile = File(...)):
+async def goodreads_import(file: UploadFile = File(...), store_id: str = Form("default")):
+    store = _get_store_or_404(store_id)
     content = await file.read()
     try:
         matches, total_rows = parse_goodreads_export(content, BOOKS.reset_index())
@@ -125,7 +202,7 @@ async def goodreads_import(file: UploadFile = File(...)):
         "total_rated_rows": total_rows,
         "matched_count": len(matches),
         "matches": [
-            {**_book_payload(int(r.book_id)), "rating": r.rating, "matched_on": r.matched_on}
+            {**_book_payload(int(r.book_id), store), "rating": r.rating, "matched_on": r.matched_on}
             for r in matches.itertuples()
         ],
     }
@@ -133,4 +210,4 @@ async def goodreads_import(file: UploadFile = File(...)):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "catalog_size": len(BOOKS), "inventory_size": len(INVENTORY_IDS)}
+    return {"status": "ok", "catalog_size": len(BOOKS), "stores": list_stores()}

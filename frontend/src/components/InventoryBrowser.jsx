@@ -2,18 +2,19 @@ import { useEffect, useState } from "react";
 import { getInventory, getInventorySections } from "../api";
 import BookCard from "./BookCard";
 
-export default function InventoryBrowser() {
+export default function InventoryBrowser({ storeId = "default" }) {
   const [sections, setSections] = useState([]);
   const [section, setSection] = useState(null);
   const [data, setData] = useState({ total: 0, items: [] });
 
   useEffect(() => {
-    getInventorySections().then(setSections);
-  }, []);
+    setSection(null);
+    getInventorySections(storeId).then(setSections);
+  }, [storeId]);
 
   useEffect(() => {
-    getInventory(section, 0, 24).then(setData);
-  }, [section]);
+    getInventory(storeId, section, 0, 24).then(setData);
+  }, [storeId, section]);
 
   return (
     <div className="inventory-browser">

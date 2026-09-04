@@ -427,6 +427,149 @@
   gap: 16px;
 }
 
+/* Role toggle */
+.role-toggle {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.role-btn {
+  padding: 10px 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.role-btn-active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+/* Store context row (customer view) */
+.store-context-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.store-selector {
+  min-width: 260px;
+}
+
+.store-selector select {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  color: var(--ink);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 0.9rem;
+}
+
+.search-result-stock {
+  flex-shrink: 0;
+}
+
+/* Describe-what-you-want */
+.describe-hint {
+  font-size: 0.88rem;
+  max-width: 75ch;
+}
+
+.describe-input-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.describe-input-row .search-input {
+  flex: 1;
+}
+
+.describe-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.describe-detected {
+  margin-top: 14px;
+  font-size: 0.85rem;
+}
+
+.describe-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+/* Store owner view */
+.store-owner-view {
+  max-width: 720px;
+}
+
+.store-format-list {
+  font-size: 0.88rem;
+  line-height: 1.7;
+  padding-left: 20px;
+  margin: 0;
+}
+
+.store-format-list code {
+  background: var(--surface-alt);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+
+.store-catalog-note {
+  font-size: 0.82rem;
+}
+
+.store-name-field {
+  max-width: 320px;
+}
+
+.store-result {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.store-code-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.store-code {
+  font-size: 1.6rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.05em;
+}
+
+.store-unmatched summary {
+  cursor: pointer;
+  font-size: 0.82rem;
+}
+
 /* Footer */
 .footer {
   display: flex;

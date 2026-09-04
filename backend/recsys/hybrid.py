@@ -39,6 +39,20 @@ def collaborative_scores_for_inventory(cf_model, inventory_book_ids, liked_item_
     return all_scores[item_idx]
 
 
+def rank_by_profile(content_model, inventory_book_ids, profile_vector, top_n=12, exclude_book_ids=None):
+    """Ranks the inventory by content-model similarity to an arbitrary
+    profile vector (e.g. from a free-text genre query rather than a set of
+    liked books) - the customer "describe what you want" path, which has
+    no ratings to fold into the collaborative model at all."""
+    exclude = set(exclude_book_ids or [])
+    candidate_ids = np.array([b for b in inventory_book_ids if b not in exclude])
+    all_scores = content_model.score_all_items(profile_vector)
+    row_of = content_model.book_id_to_row
+    scores = np.array([all_scores[row_of[b]] if b in row_of else 0.0 for b in candidate_ids])
+    order = np.argsort(-scores)[:top_n]
+    return [(int(candidate_ids[i]), float(scores[i])) for i in order]
+
+
 def hybrid_rank(
     content_model,
     cf_model,

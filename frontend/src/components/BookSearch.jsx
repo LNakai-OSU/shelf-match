@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { searchBooks } from "../api";
 
-export default function BookSearch({ onAdd }) {
+export default function BookSearch({ onAdd, storeId = "default" }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,13 +15,13 @@ export default function BookSearch({ onAdd }) {
     }
     debounceRef.current = setTimeout(() => {
       setLoading(true);
-      searchBooks(query.trim())
+      searchBooks(query.trim(), storeId)
         .then(setResults)
         .catch(() => setResults([]))
         .finally(() => setLoading(false));
     }, 250);
     return () => clearTimeout(debounceRef.current);
-  }, [query]);
+  }, [query, storeId]);
 
   return (
     <div className="book-search">
@@ -42,6 +42,7 @@ export default function BookSearch({ onAdd }) {
                 <span className="search-result-title">{b.title}</span>
                 <span className="search-result-author muted">{b.authors}</span>
               </div>
+              {b.in_inventory && <span className="chip chip-stock search-result-stock">in stock here</span>}
               <button
                 className="btn btn-primary btn-small"
                 onClick={() => {

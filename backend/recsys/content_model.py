@@ -57,6 +57,12 @@ class ContentModel:
         weighted = sub.multiply(weights[:, None])
         return np.asarray(weighted.sum(axis=0))
 
+    def profile_from_document(self, document):
+        """Same vector space as profile_vector, but from an arbitrary token
+        string (e.g. genre keywords detected in a free-text query) instead
+        of an existing book's own document."""
+        return self.vectorizer.transform([document])
+
     def score_all_items(self, profile_vector):
         """Returns a book_id -> cosine-similarity score array (aligned with self.book_ids)."""
         sims = cosine_similarity(profile_vector, self.matrix)[0]
