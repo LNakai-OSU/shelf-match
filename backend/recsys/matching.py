@@ -31,6 +31,19 @@ def normalize_title(title):
     return re.sub(r"\s+", " ", t).strip()
 
 
+def _isbn_column_value(x):
+    """Handles both goodbooks-10k's numeric (float, NaN-for-missing) isbn
+    columns and the large catalog's plain-string ("" for missing) ones -
+    str(9780312853129.0) is "9780312853129.0", and blindly stripping
+    non-digit characters would keep the stray trailing 0 from ".0" and
+    corrupt the ISBN, so a float needs int() first; a string doesn't."""
+    if x is None or (isinstance(x, float) and pd.isna(x)) or x == "":
+        return None
+    if isinstance(x, float):
+        return clean_isbn(str(int(x)))
+    return clean_isbn(x)
+
+
 def normalize_author(author):
     if author is None or (isinstance(author, float) and pd.isna(author)):
         return ""
@@ -44,8 +57,8 @@ class BookIndex:
 
     def __init__(self, books_df):
         books = books_df.copy()
-        books["_isbn13"] = books["isbn13"].map(lambda x: clean_isbn(str(int(x))) if pd.notna(x) else None)
-        books["_isbn"] = books["isbn"].map(clean_isbn)
+        books["_isbn13"] = books["isbn13"].map(_isbn_column_value)
+        books["_isbn"] = books["isbn"].map(_isbn_column_value)
         books["_norm_title"] = books["title"].map(normalize_title)
         books["_norm_author"] = books["authors"].map(normalize_author)
 

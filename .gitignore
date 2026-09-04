@@ -8,6 +8,8 @@ dist-ssr/
 .DS_Store
 
 # raw/processed data and trained model artifacts are large and fully
-# reproducible via fetch_data.py -> build_inventory.py -> train_models.py
+# reproducible via fetch_large_dataset.py -> build_large_catalog.py ->
+# build_inventory.py -> build_large_interactions.py -> train_large_models.py
 data/raw/
+data/raw_large/
 data/processed/

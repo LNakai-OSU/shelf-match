@@ -153,9 +153,10 @@ export default function App() {
           <h1>Shelf Match</h1>
           <p className="muted">
             A book recommender constrained to what a small store actually has on the shelf.
-            Trained on ~6M real Goodreads ratings across 10,000 books, but every recommendation
-            is filtered down to one store's actual inventory - pick a store as a customer, or
-            list your own shelf as a store.
+            Trained on 11.5M real Goodreads ratings across 75,000 books - with real semantic
+            search over actual book descriptions, not just genre keywords - but every
+            recommendation is filtered down to one store's actual inventory - pick a store as
+            a customer, or list your own shelf as a store.
           </p>
         </div>
         <div className="role-toggle">
@@ -171,8 +172,8 @@ export default function App() {
       {role === "customer" ? <CustomerView /> : <StoreOwnerView onSwitchToCustomer={() => setRole("customer")} />}
 
       <footer className="footer mono">
-        <span>Data: goodbooks-10k (Zajac) - FastAPI + React</span>
-        <span>Content model, matrix-factorization CF, and hybrid re-ranking - see README</span>
+        <span>Data: UCSD Goodreads Book Graph (Wan &amp; McAuley) - FastAPI + React</span>
+        <span>Sentence-embedding search, matrix-factorization CF, and hybrid re-ranking - see README</span>
       </footer>
     </div>
   );

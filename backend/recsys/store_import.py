@@ -9,7 +9,7 @@ whatever's easiest for them to produce:
   "Title, Author" (a title alone still works - it just falls back to
   title-only matching, see `matching.BookIndex`).
 
-Every row gets matched against the goodbooks-10k catalog the same way a
+Every row gets matched against the catalog the same way a
 Goodreads export row does (ISBN13 -> ISBN -> title+author -> title alone) -
 a store's list is just another external source with its own formatting
 quirks, not a fundamentally different problem.

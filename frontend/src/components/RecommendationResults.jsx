@@ -4,13 +4,13 @@ const COLUMNS = [
   {
     key: "content",
     title: "Content-based",
-    blurb: "Similarity of genre tags & author to your favorites. Works even with no ratings history.",
+    blurb: "Semantic similarity of each book's actual description to your favorites (sentence embeddings, not genre tags). Works even with no ratings history.",
     scoreType: "percent",
   },
   {
     key: "collaborative",
     title: "Collaborative filtering",
-    blurb: "\"Readers like you\" - a latent-factor model trained on ~6M Goodreads ratings, folded in for your profile. With only a handful of favorites, this tends toward broadly-loved books rather than fine-grained taste - a real cold-start limit, not a bug (see README).",
+    blurb: "\"Readers like you\" - a latent-factor model trained on 11.5M Goodreads ratings, folded in for your profile. With only a handful of favorites, this tends toward broadly-loved books rather than fine-grained taste - a real cold-start limit, not a bug (see README).",
     scoreType: "rating",
   },
   {

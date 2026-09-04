@@ -1,6 +1,6 @@
 """
 In-memory store registry. Each "store" is just a named subset of the
-goodbooks-10k catalog (a set of book_ids + per-book stock quantities).
+book catalog (a set of book_ids + per-book stock quantities).
 
 The pre-built simulated inventory from `build_inventory.py` is registered
 as the "default" store at API startup; any store owner can create their

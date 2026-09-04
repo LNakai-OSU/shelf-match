@@ -1,6 +1,6 @@
 const STARS = [1, 2, 3, 4, 5];
 
-export default function BookCard({ book, score, scoreType = "percent", rank, onAdd, rating, onRate, onRemove }) {
+export default function BookCard({ book, score, scoreType = "percent", rank, onAdd, rating, onRate, onRemove, showDescription = false }) {
   return (
     <div className="book-card">
       {typeof rank === "number" && <span className="book-rank mono">{rank}</span>}
@@ -16,6 +16,7 @@ export default function BookCard({ book, score, scoreType = "percent", rank, onA
             <span className="chip chip-out">not carried</span>
           )}
         </div>
+        {showDescription && book.description && <p className="book-description">{book.description}</p>}
         {score != null && scoreType === "rating" && (
           <p className="book-score mono">predicted rating {score.toFixed(2)} / 5</p>
         )}

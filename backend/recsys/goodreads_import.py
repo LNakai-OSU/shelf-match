@@ -1,7 +1,7 @@
 """
 Parses a real Goodreads library export (Settings -> Export Library on
 goodreads.com, downloads `goodreads_library_export.csv`) and matches its
-rows against the goodbooks-10k catalog.
+rows against the catalog.
 
 Goodreads' public API has been gone since 2020, so a personal export is the
 only first-party way to bring a real reading history into an app like this
@@ -16,7 +16,7 @@ from .matching import BookIndex
 
 
 def parse_goodreads_export(file_bytes, books_df):
-    """books_df: the goodbooks-10k books table (needs isbn, isbn13, title, authors).
+    """books_df: the catalog's books table (needs isbn, isbn13, title, authors).
     Returns a DataFrame with columns [book_id, rating, title, matched_on],
     one row per export row that could be matched and had a usable rating."""
     raw = pd.read_csv(io.BytesIO(file_bytes))

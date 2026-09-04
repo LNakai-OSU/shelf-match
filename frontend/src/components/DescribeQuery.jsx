@@ -3,10 +3,10 @@ import { getRecommendationsByDescription } from "../api";
 import BookCard from "./BookCard";
 
 const EXAMPLES = [
+  "stylistically groundbreaking with an intriguing plot",
   "a cozy mystery with a strong female lead",
-  "epic fantasy with dragons",
-  "historical romance set in England",
-  "a fast-paced sci-fi thriller",
+  "unreliable narrator, slow-burn dread",
+  "a sweeping multigenerational family saga",
 ];
 
 export default function DescribeQuery({ storeId }) {
@@ -30,16 +30,15 @@ export default function DescribeQuery({ storeId }) {
   return (
     <div className="describe-query">
       <p className="muted describe-hint">
-        Say what you're in the mood for - this matches genre/vibe words against the store's
-        shelf directly, no ratings needed. It's keyword matching against a curated genre
-        vocabulary, not a language model, so naming a genre or two works better than a full
-        sentence about your day.
+        Describe the book you want in your own words - real sentence embeddings match the
+        meaning of what you write against every book's actual description, not just keywords
+        against a genre list. Abstract, specific, or a full sentence all work.
       </p>
       <div className="describe-input-row">
         <input
           className="search-input"
           type="text"
-          placeholder='e.g. "a cozy mystery with a strong female lead"'
+          placeholder='e.g. "stylistically groundbreaking with an intriguing plot"'
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && run()}
@@ -58,18 +57,16 @@ export default function DescribeQuery({ storeId }) {
 
       {error && <div className="error-banner">{error}</div>}
 
-      {result && result.message && <p className="muted">{result.message}</p>}
-
-      {result && result.genres_detected.length > 0 && (
+      {result && result.sections_detected.length > 0 && (
         <p className="describe-detected muted">
-          Detected: {result.sections_detected.join(", ")}
+          Top matches lean toward: {result.sections_detected.join(", ")}
         </p>
       )}
 
       {result && result.results.length > 0 && (
         <div className="describe-results">
           {result.results.map((book, i) => (
-            <BookCard key={book.book_id} book={book} score={book.score} scoreType="percent" rank={i + 1} />
+            <BookCard key={book.book_id} book={book} score={book.score} scoreType="percent" rank={i + 1} showDescription />
           ))}
         </div>
       )}

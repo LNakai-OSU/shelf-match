@@ -40,8 +40,7 @@ export default function GoodreadsUpload({ onImport, storeId = "default" }) {
       {status && (
         <p className="upload-result muted">
           Matched {status.matched_count} of {status.total_rated_rows} rated books against this
-          catalog (goodbooks-10k only covers ~10,000 popular titles, so some of your history
-          won't be found here).
+          catalog (75,000 well-known titles, so some of your history still won't be found here).
         </p>
       )}
     </div>

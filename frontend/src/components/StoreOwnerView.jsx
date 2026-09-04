@@ -41,9 +41,9 @@ export default function StoreOwnerView({ onSwitchToCustomer }) {
         </li>
       </ul>
       <p className="muted store-catalog-note">
-        Only books in the goodbooks-10k catalog (~10,000 well-known titles) can be matched -
-        this is a demo built on a fixed public dataset, not a live lookup against every book in
-        print.
+        Only books in this demo's catalog (75,000 well-known titles from the UCSD Goodreads
+        Book Graph) can be matched - this is a fixed public dataset, not a live lookup against
+        every book in print.
       </p>
 
       <label className="field store-name-field">
@@ -90,7 +90,7 @@ export default function StoreOwnerView({ onSwitchToCustomer }) {
                 {result.total_rows - result.matched_count} row(s) couldn't be matched
               </summary>
               <p className="muted">
-                Usually means the title isn't one of the ~10,000 books in this demo's catalog,
+                Usually means the title isn't one of the 75,000 books in this demo's catalog,
                 or the title/author spelling didn't line up closely enough to match.
               </p>
             </details>

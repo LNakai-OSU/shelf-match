@@ -41,7 +41,7 @@ def collaborative_scores_for_inventory(cf_model, inventory_book_ids, liked_item_
 
 def rank_by_profile(content_model, inventory_book_ids, profile_vector, top_n=12, exclude_book_ids=None):
     """Ranks the inventory by content-model similarity to an arbitrary
-    profile vector (e.g. from a free-text genre query rather than a set of
+    profile vector (e.g. a semantic embedding of a free-text query rather than a set of
     liked books) - the customer "describe what you want" path, which has
     no ratings to fold into the collaborative model at all."""
     exclude = set(exclude_book_ids or [])

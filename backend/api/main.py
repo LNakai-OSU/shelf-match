@@ -6,11 +6,12 @@ import pandas as pd
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from sentence_transformers import SentenceTransformer
 
 from recsys.data_loader import PROCESSED
 from recsys.goodreads_import import parse_goodreads_export
 from recsys.hybrid import hybrid_rank, rank_by_profile
-from recsys.query_parser import query_to_document
+from recsys.semantic_model import SemanticModel
 from recsys.store_import import parse_store_upload
 from recsys.stores import create_store, get_store, list_stores, register_store
 
@@ -23,13 +24,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-BOOKS = pd.read_csv(PROCESSED / "books_enriched.csv").set_index("book_id")
+BOOKS = pd.read_csv(PROCESSED / "books_large.csv").set_index("book_id")
 BOOKS["authors"] = BOOKS["authors"].fillna("Unknown")
+BOOKS["description"] = BOOKS["description"].fillna("")
 
-with open(PROCESSED / "content_model.pkl", "rb") as f:
-    CONTENT_MODEL = pickle.load(f)
+with open(PROCESSED / "semantic_model.pkl", "rb") as f:
+    SEMANTIC_MODEL: SemanticModel = pickle.load(f)
 
-with open(PROCESSED / "cf_model.pkl", "rb") as f:
+QUERY_ENCODER = SentenceTransformer(SemanticModel.MODEL_NAME)
+
+with open(PROCESSED / "cf_model_large.pkl", "rb") as f:
     _cf_blob = pickle.load(f)
     CF_MODEL = _cf_blob["model"]
 
@@ -56,11 +60,13 @@ def _book_payload(book_id, store=None, score=None):
         "book_id": int(book_id),
         "title": row["title"],
         "authors": row["authors"],
+        "description": row["description"],
         "average_rating": float(row["average_rating"]),
         "ratings_count": int(row["ratings_count"]),
+        "publication_year": int(row["publication_year"]) if pd.notna(row["publication_year"]) else None,
         "image_url": row["image_url"],
         "section": row["section"] if pd.notna(row["section"]) else "General",
-        "genres": row["genres"].split("|") if isinstance(row["genres"], str) and row["genres"] else [],
+        "primary_genre": row["primary_genre"] if pd.notna(row["primary_genre"]) else "",
         "in_inventory": in_stock,
         "stock_quantity": store["stock"].get(int(book_id), 0) if in_stock else 0,
     }
@@ -148,7 +154,7 @@ def recommendations(req: RecommendRequest):
         raise HTTPException(400, f"unknown book_id(s): {unknown}")
 
     ranked = hybrid_rank(
-        CONTENT_MODEL,
+        SEMANTIC_MODEL,
         CF_MODEL,
         list(store["book_ids"]),
         liked_ids,
@@ -169,23 +175,22 @@ class DescribeRequest(BaseModel):
 @app.post("/api/recommendations/by-description")
 def recommendations_by_description(req: DescribeRequest):
     store = _get_store_or_404(req.store_id)
-    document, detected = query_to_document(req.query)
-    if document is None:
-        return {
-            "genres_detected": [],
-            "sections_detected": [],
-            "results": [],
-            "message": (
-                "Couldn't pick out a genre from that description - try naming a genre or "
-                "vibe directly (e.g. \"cozy mystery,\" \"epic fantasy,\" \"YA romance\")."
-            ),
-        }
-    profile = CONTENT_MODEL.profile_from_document(document)
-    ranked = rank_by_profile(CONTENT_MODEL, list(store["book_ids"]), profile, top_n=req.top_n)
+    query = req.query.strip()
+    if len(query) < 3:
+        raise HTTPException(400, "query is too short")
+
+    query_vector = SEMANTIC_MODEL.encode_query(query, QUERY_ENCODER)
+    ranked = rank_by_profile(SEMANTIC_MODEL, list(store["book_ids"]), query_vector, top_n=req.top_n)
+    results = [_book_payload(bid, store, score) for bid, score in ranked]
+
+    section_counts = {}
+    for r in results[:8]:
+        section_counts[r["section"]] = section_counts.get(r["section"], 0) + 1
+    top_sections = sorted(section_counts, key=section_counts.get, reverse=True)[:3]
+
     return {
-        "genres_detected": detected["genres"],
-        "sections_detected": detected["sections"],
-        "results": [_book_payload(bid, store, score) for bid, score in ranked],
+        "sections_detected": top_sections,
+        "results": results,
         "message": None,
     }
 
