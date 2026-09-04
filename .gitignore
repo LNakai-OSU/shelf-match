@@ -1,0 +1,13 @@
+venv/
+__pycache__/
+*.pyc
+node_modules/
+dist/
+dist-ssr/
+*.local
+.DS_Store
+
+# raw/processed data and trained model artifacts are large and fully
+# reproducible via fetch_data.py -> build_inventory.py -> train_models.py
+data/raw/
+data/processed/

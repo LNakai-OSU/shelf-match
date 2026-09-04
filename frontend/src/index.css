@@ -1,0 +1,54 @@
+:root {
+  --bg: #f7f3ea;
+  --surface: #ffffff;
+  --surface-alt: #efe7d6;
+  --ink: #2b2420;
+  --ink-soft: #5c5248;
+  --muted: #948a7a;
+  --accent: #7a2e2e;
+  --accent-ink: #f7f3ea;
+  --accent-soft: #f0dcdc;
+  --good: #3f5d3a;
+  --good-soft: #e1ead9;
+  --border: rgba(43, 36, 32, 0.12);
+  --grid-line: rgba(43, 36, 32, 0.06);
+  --shadow: rgba(43, 36, 32, 0.1);
+
+  color-scheme: light;
+  font-family: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: "Lora", ui-serif, Georgia, serif;
+  font-weight: 600;
+  margin: 0;
+  text-wrap: balance;
+}
+
+p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+button {
+  font-family: inherit;
+}
+
+.mono {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+img {
+  max-width: 100%;
+}
