@@ -24,6 +24,25 @@ Two sides to the app:
   picker, three ways to build a customer profile, and a three-way
   recommendation comparison.
 
+## Design system: Material 3, tuned for a bookshop
+
+The UI runs on a real Material 3 foundation rather than a hand-picked
+palette. Color roles (primary/secondary/tertiary + containers, the
+surface-container tonal steps, outline, error) are generated algorithmically
+from the shop's existing wine-red identity (`#7A2E2E`) via Google's
+`@material/material-color-utilities` HCT tonal-spot algorithm - the same
+math behind Material You - which is also where the warm gold tertiary color
+came from (M3 derived it as a complementary hue, not something picked by
+hand). Typography follows M3's brand/plain typeface roles: Lora (serif) for
+display text, Source Sans 3 for UI text, both at M3's type-scale sizes.
+Components follow M3 patterns - segmented buttons for the customer/store and
+tab toggles, assist chips, outlined text fields, elevated cards with real M3
+shadows and state layers. "In stock" and "out of stock" use real color
+roles too: out-of-stock reuses M3's `error` role (it already means "this
+doesn't work right now"), and in-stock uses a custom `success` role - the
+kind of app-specific extension M3's spec explicitly allows for cases the
+base three palettes don't cover.
+
 ## The dataset: 75,000 books, 11.5M ratings, real descriptions
 
 This project started on [goodbooks-10k](https://github.com/zygmuntz/goodbooks-10k)
